@@ -3,7 +3,7 @@ import whisper_at as whisper
 import wget
 import os
 from pathlib import Path
-import ffmpeg
+
 
 LARGE_V2 = "large-v1"
 LARGE_V1 = "large-v1"
