@@ -1,0 +1,29 @@
+.container {
+    display: flex;
+    justify-content: space-between;
+}
+
+.player{
+    width:30%;
+    height: 100%;
+    padding:20px
+}
+.text-container{
+    width: 70%;
+    height: 100%;
+    padding: 20px;
+    background-color: #ccc3c3;
+}
+
+#audio-track {
+    width: 150px;
+    height: 100%;
+    background-color: #dddddd;
+    margin: 20px 0
+}
+ 
+.time {
+    width: 0;
+    height: 3px;
+    background-color: #d05252
+}

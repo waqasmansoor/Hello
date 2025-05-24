@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Flask App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+
+</head>
+
+<body>
+    <div class=" container">
+        <div class="player">
+            <h1>Choose a File to Play</h1>
+            <!-- <audio id="audio" src="./audio/treck1.mp3" controls></audio> -->
+
+            <input id="load-file" type="file" name="file" accept=".mp3, .wav, .ogg">
+            <div id="controls">
+                <div id="audio-track">
+                    <div class="time"></div>
+                </div>
+                <button class="play">Play</button>
+                <button class="pause">Pause</button>
+                <!-- <button class="prev">&#60;prev</button>
+        <button class="next">next&#62;</button> -->
+            </div>
+        </div>
+        <div class="text-container">
+            <div class='text'>
+
+            </div>
+        </div>
+    </div>
+    <script>
+        h2Text = document.createElement('h2')
+        document.querySelector('.text').appendChild(h2Text)
+        h2Text.innerHTML = 'Initializing Model...'
+        getStatus = setInterval(function () {
+            fetch('/get_status').then(res => res.json())
+                .then(data => {
+                    if (data.loaded == true) {
+                        h2Text.innerHTML = 'Ready to transcribe'
+                        clearInterval(getStatus)
+                    }
+                })
+        }, 1000)
+
+        document.getElementById('load-file').onchange = function () {
+            const file = document.getElementById('load-file').files[0]
+            if (file) {
+
+                // document.getElementById('audio-track').style.backgroundColor = 'blue'
+                let audioTime = 0;
+                let audio = document.createElement('audio')
+                audio.src = URL.createObjectURL(file)
+                document.querySelector('.play').addEventListener('click', function () {
+                    h2Text.innerHTML = 'Transcribing...'
+                    
+                    const filename= file.name;
+                    fetch('/get_transcribtion', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename: filename })
+                    }).then(res => res.json())
+                        .then(data => {
+
+                            audio.play()
+                            audio.currentTime = audioTime;
+                            controls = setInterval(function () {
+                                let audioTime = Math.round(audio.currentTime)
+                                let audioDuration = Math.round(audio.duration)
+                                document.querySelector('.time').style.width = (audioTime / audioDuration) * 100 + '%'
+
+                                for (let i = 0; i < data.segments.length; i++) {
+                                    const segment = data.segments[i];
+                                    if (currentTime >= segment.start && currentTime < segment.end) {
+                                        h2Text.innerHTML = segment.text;
+                                        break;
+                                    }
+                                }
+                            }, 100);
+                        })
+
+
+                    document.querySelector('.pause').addEventListener('click', function () {
+                        audio.pause()
+                        audioTime = Math.round(audio.currentTime)
+
+                    })
+                })
+
+
+            }
+        }
+    </script>
+</body>
+
+</html>
