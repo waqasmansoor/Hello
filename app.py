@@ -45,7 +45,8 @@ def load_model(path:str, message_box:callable):
     pygame.mixer.init()
     pipeline = Pipeline.from_pretrained(
         "pyannote/speaker-diarization-3.1",
-        use_auth_token="HF_TOKEN")
+        # use_auth_token=""
+        )
 
     model = whisper.load_model(TINY,download_root=path)
     # time.sleep(5)
@@ -127,7 +128,7 @@ def wait_for_thread():
 
 def select_file():
     global model
-    audio_tagging_time_resolution = 10
+    audio_tagging_time_resolution = 30
     filetypes = (
         ('All files', '*.*'),
         ('MP3', '*.mp3'),
