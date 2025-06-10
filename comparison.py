@@ -214,21 +214,28 @@ for i in range(len(names)):
 
 
 
-def get_speakers(part):
+def get_speakers(part): 
     return np.unique([x[0] for x in part])
 
+old_speakers=None
+dict_format={}
 for i,part in enumerate(text_parts):    
+    
     speakers=get_speakers(text_parts[i])
-    dict_format = "{" + ", ".join([f"'{s}': null" for s in speakers]) + "}"
+    for s in speakers:
+        if s not in dict_format:
+            dict_format[s]=None
+        else:
+            if old_speakers and s in old_speakers:
+                dict_format[s]=old_speakers[s]
+
+    
     transcript_text = "\n".join([f"[{s}] {t}" for s, t in part])
-    # print(transcript_text)
-# print(transcript.to_string())
-# print(speakers)
 
     prompt = (
         "Extract full names for each speaker from the transcript below. "
         "Return only this Python dictionary:\n"
-        f"{dict_format}\n\n"
+        f"{str(dict_format)}\n\n"
         "Rules:\n"
         "- Only use full names that are explicitly stated.\n"
         "- Do not guess or make up names.\n"
@@ -248,4 +255,6 @@ for i,part in enumerate(text_parts):
     response.raise_for_status()
 
     result = response.json()
-    print(result)
+    if "result" in response:
+        print(result["response"])
+        old_speakers = result["response"]
