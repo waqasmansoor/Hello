@@ -1,25 +1,27 @@
-import whisper
+
 import time
 import torchaudio
 import gc
 import torch
 import numpy as np
 import subprocess
-from whisperx.alignment import align, load_align_model
+from whisperx.alignment import align
+from alignment import load_align_model
 from whisperx.audio import load_audio
 import pickle
-
+import whisperx
 from whisperx.diarize import DiarizationPipeline,assign_word_speakers
 
 SAMPLE_RATE = 16000
 
 def transcribe(audio_paths):
     results = []
-    model = whisper.load_model("medium.en")
+    model = whisperx.load_model("tiny.en", device="cuda" if whisperx.torch.cuda.is_available() else "cpu")
+    
     start = time.time()
     for audio_path in audio_paths:
         audio = load_audio(audio_path)
-        result = model.transcribe(audio,verbose = True)
+        result = model.transcribe(audio,batch_size=8,no_speech_threshold=0.65,condition_on_previous_text=False)
         results.append((result,audio_path))
     print(f"Time to transcribe: {time.time()-start}")
     del model
@@ -30,7 +32,7 @@ def transcribe(audio_paths):
 
             
 
-audio = "audios/tel1_000.wav"
+audio = "audios/audio.wav"
 language_code = "en"
 model_dir = "models"
 device = "cpu"
@@ -40,25 +42,25 @@ align_model, align_metadata = load_align_model(language_code,device, model_dir =
 results = transcribe([audio])
 with open("transcribe.pkl",'wb') as f:
     pickle.dump(results,f)
-# tmp_results = results
-# results = []
-# for result,audio_path in tmp_results:
-#     if len(result) > 1:
-#         input_audio = audio_path
-#     else:
-#         input_audio = audio
+tmp_results = results
+results = []
+for result,audio_path in tmp_results:
+    if len(result) > 1:
+        input_audio = audio_path
+    else:
+        input_audio = audio
 
-#     if len(result["segments"]) > 0:
-#         print(">>Performing alignment...")
-#         result = align(result["segments"],align_model,align_metadata,input_audio,device,print_progress = True)
-#     results.append((result,input_audio))
+    if len(result["segments"]) > 0:
+        print(">>Performing alignment...")
+        result = align(result["segments"],align_model,align_metadata,input_audio,device,print_progress = True)
+    results.append((result,input_audio))
 
-# with open("align.pkl",'wb') as f:
-#     pickle.dump(results,f)
+with open("align.pkl",'wb') as f:
+    pickle.dump(results,f)
 
-# del align_model
-# gc.collect()
-# torch.cuda.empty_cache()
+del align_model
+gc.collect()
+torch.cuda.empty_cache()
 
 tmp_results = results
 results = []

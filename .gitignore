@@ -18,4 +18,5 @@ pyannote_result.py
 *.pkl
 data
 whisperx_diarizer.py
-
+call_auditor.db
+__pycache__
