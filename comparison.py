@@ -162,56 +162,68 @@ for seg in diarization_segments["segments_with_speakers"]:
 speakers = t.get_speakers()
 transcript = t
 
-lines = t.to_string()
-start = False
-names = []
-texts=[]
-text = ""
-for l in lines:
-    if l == "[":
-        start = True
-        name = ""
-        if text != "":
-            texts.append(text)
-        continue
-    if l == "]":
-        start = False
-        names.append(name)
-        text = ""
-        continue
 
-    if start:
-        name = "".join([name,l])
-    else:
-        text += l
-texts.append(text)
-
-def count_tokens(part):
-    tokens=0
-    for i in part:        
-        tokens+=len(i[1])//4
+def count_tokens(text:str):
+    
+    tokens=len(text)//4
     return tokens
 
-
-tt=0
-tthresh=500
-text_parts=[]
-k=0
-for i in range(len(names)):
-    text = texts[i]
-    name = names[i]
-    tokens = len(text)//4
-    tt += tokens
-    if tt > tthresh:
-        tt=0
-        part = []
+def limit_text_to_tokens(no_of_tokens:int,text:str):
+    '''
+    INPUT:
+        no_of_tokens 500
         
-        for j in range(k,i):
-            part.append((names[j],texts[j]))
-        k=i
-        tokens_in_part = count_tokens(part)
-        text_parts.append(part)
+        text:
+            [SPEAKER_01] speaker text...
+            [SPEAKER_02] speaker text...
+    '''
+    start = False
+    names = []
+    texts=[]
+    text = ""
+    for l in text:
+        if l == "[":
+            start = True
+            name = ""
+            if text != "":
+                texts.append(text)
+            continue
+        if l == "]":
+            start = False
+            names.append(name)
+            text = ""
+            continue
 
+        if start:
+            name = "".join([name,l])
+        else:
+            text += l
+    texts.append(text)
+
+
+
+    tt=0
+    tthresh=no_of_tokens
+    text_parts=[]
+    k=0
+    for i in range(len(names)):
+        text = texts[i]
+        name = names[i]
+        tokens = len(text)//4
+        tt += tokens
+        if tt > tthresh:
+            tt=0
+            part = []
+            
+            for j in range(k,i):
+                part.append((names[j],texts[j]))
+            k=i
+            tokens_in_part = count_tokens(part)
+            text_parts.append(part)
+    return text_parts
+
+# lines = t.to_string()
+# print(limit_text_to_tokens(lines))
 
 
 def get_speakers(part): 
@@ -219,42 +231,112 @@ def get_speakers(part):
 
 old_speakers=None
 dict_format={}
-for i,part in enumerate(text_parts):    
+# for i,part in enumerate(text_parts):    
     
-    speakers=get_speakers(text_parts[i])
-    for s in speakers:
-        if s not in dict_format:
-            dict_format[s]=None
-        else:
-            if old_speakers and s in old_speakers:
-                dict_format[s]=old_speakers[s]
+#     speakers=get_speakers(text_parts[i])
+#     for s in speakers:
+#         if s not in dict_format:
+#             dict_format[s]=None
+#         else:
+#             if old_speakers and s in old_speakers:
+#                 print(dict_format,old_speakers)
+#                 dict_format[s]=old_speakers[s]
 
     
-    transcript_text = "\n".join([f"[{s}] {t}" for s, t in part])
+#     transcript_text = "\n".join([f"[{s}] {t}" for s, t in part])
 
+def run_old_model():
+    for s in t.get_speakers():
+        payload = {
+            "model": "mixtral",
+            "prompt": f"Given the following transcript, extract and return only the full name of"
+                        f" the {s}. Do not include any"
+                        f" explanation or extra text. Return only the name."
+                        f"\n\nTranscript:\n{transcript.to_string()}\n\nAnswer (only the name):",
+            "stream": False,
+            "keep_alive": 0
+        }
+
+        # response = requests.post("http://192.168.23.150:11434" + "/api/generate", json=payload)
+        response = requests.post("http://192.168.23.142:11434" + "/api/generate", json=payload)
+        response.raise_for_status()
+
+        result = response.json()
+
+        if "response" in result:
+            print(f"Result for {s}: {result['response']}")
+
+# run_old_model()
+
+def run_new_model(model:str,speaker_text:str,speaker:str):
+    
     prompt = (
-        "Extract full names for each speaker from the transcript below. "
-        "Return only this Python dictionary:\n"
-        f"{str(dict_format)}\n\n"
-        "Rules:\n"
-        "- Only use full names that are explicitly stated.\n"
-        "- Do not guess or make up names.\n"
-        "- Use null if the full name is not mentioned.\n"
-        "- Do not add any extra explanation.\n\n"
-        f"Transcript:\n{transcript_text}\n"
+        f"The following is everything said by one speaker:\n\n"
+        f"{speaker_text}\n\n"
+        "Instructions:\n"
+        "- ONLY return the name if the speaker clearly said their own name\n"
+        "- If not, return: null\n"
+        "- DO NOT include anything else — no explanation, no emojis, no formatting.\n"
+        "- Output must be exactly one line.\n"
     )
 
+
+
+
+
+
     payload = {
-        "model": "mistral:7b",
+        "model": model,
         "prompt": prompt,
         "stream": False,
         "keep_alive": 0
     }
-
-    response = requests.post("http://127.0.0.1:11434" + "/api/generate", json=payload)
+    
+    response = requests.post("http://192.168.23.142:11434" + "/api/generate", json=payload)
     response.raise_for_status()
 
     result = response.json()
-    if "result" in response:
-        print(result["response"])
-        old_speakers = result["response"]
+
+    if "response" in result:
+        print(f"Results {result['response']}")
+
+# run_new_model("gemma3:8b")
+# run_new_model("mistral")
+
+text= transcript.to_string()
+def get_speaker_text(speaker:str,full_text:str):
+    '''
+    INPUT:
+        speaker SPEAKER_01
+        
+        text:
+            [SPEAKER_01] speaker text...
+            [SPEAKER_02] speaker text...
+    '''
+    text = ""
+    for line in full_text.splitlines():
+        capture_speaker_name = False
+        name=""
+        for i,c in enumerate(line):
+            if c == "[":
+                capture_speaker_name=True
+            if capture_speaker_name:
+                name+=c
+            if c== "]":
+                break
+                
+        
+        name = name[1:-1] #Remove brackets
+        if name == speaker:
+            t= line[i+1:].strip()+"\n"
+            text+=t            
+            
+            # print(name,line[i+1:])
+    
+    print(f"{speaker}, Tokens: {count_tokens(text)}")
+    return text
+
+for s in t.get_speakers():
+    speaker_text = get_speaker_text(s,text)
+    # print(s,speaker_text)
+    run_new_model("mixtral",speaker_text,s)
