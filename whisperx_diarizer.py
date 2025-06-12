@@ -12,7 +12,7 @@ import requests
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 audio_file = "audios/audio.wav"
-batch_size = 16 # reduce if low on GPU mem
+batch_size = 4 # reduce if low on GPU mem
 compute_type = "int8" if device=="cpu" else "float32" # change to "int8" if low on GPU mem (may reduce accuracy)
 model="medium.en"
 model_dir = "model"
