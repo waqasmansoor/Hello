@@ -3,13 +3,14 @@ import torch
 import os
 import argparse
 import pickle
+from whisperx.diarize import DiarizationPipeline,assign_word_speakers
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 audio_file = "audios/audio.wav"
 batch_size = 16 # reduce if low on GPU mem
 compute_type = "int8" if device=="cpu" else "float32" # change to "int8" if low on GPU mem (may reduce accuracy)
 model="medium.en"
-model_dir = os.path.join("models",model)
+model_dir = "model"
 
 
 
@@ -22,9 +23,11 @@ if __name__ == "__main__":
     
 if os.path.exists(args.filename):
     audio = whisperx.load_audio(args.filename)
-    print(f"Running Whisper {model} on {device}")
+    print(f"Running Whisper {model} on {device}...")
     if not os.path.exists(model_dir):
         os.mkdir(model_dir)
+    if not os.path.exists(os.path.join(model_dir,model)):
+        os.mkdir(os.path.join(model_dir,model))
     model = whisperx.load_model(model, device, compute_type=compute_type,download_root=model_dir)   
     result = model.transcribe(audio, batch_size=batch_size)
 
@@ -34,13 +37,13 @@ if os.path.exists(args.filename):
     with open(os.path.join(transcript_path,"transcript.pkl"),"wb") as fp:
         pickle.dump(result,fp)
 
+    print(f"Performing Diarization...")
+    diarize_model = DiarizationPipeline(use_auth_token="HF_TOKEN", device=device)
+
 else:
     print("No such file exists")
     
 
-
-    
-    
 
 
     
