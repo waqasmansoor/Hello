@@ -1,14 +1,14 @@
 urro_whisper.py
 models/*
 ffmpeg-7.1.1-essentials_build/*
-audios/*
+
 at_whisper.py
 static/*
 templates/*
 test.py
 download_audio.py
 _pycache
-audios
+audios/ron_jarret.wav
 hugging_face.txt
 nemo_diarizer.py
 pyannote_diarizer.py
