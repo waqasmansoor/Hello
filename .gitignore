@@ -4,3 +4,4 @@ embeddings.pkl
 faiss.index
 labels.pkl
 temp_test.wav
+__pycache__/*

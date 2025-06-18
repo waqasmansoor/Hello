@@ -5,18 +5,21 @@ import numpy as np
 import pickle
 from vad import apply_vad
 from build_faiss import build_faiss_index
+from speechbrain.pretrained import EncoderClassifier
 
 # Load pretrained ECAPA model
 
 
 # Path to dataset
-DATASET_DIR = "dataset"
 EMBEDDINGS_PATH = "embeddings.pkl"
 
-# Storage
+base_dir = os.path.dirname(os.path.abspath(__file__))
+model_dir = os.path.join(base_dir, 'model', 'spkrec-ecapa-voxceleb')
+classifier = EncoderClassifier.from_hparams(source=model_dir)
+DATASET_DIR = os.path.join(base_dir,'dataset')
 
 
-def save_embeddings(name,status,classifier,extract_all=False):
+def save_embeddings(name,status,extract_all=False):
     # Loop over each speaker
     speakers = os.listdir(DATASET_DIR) if extract_all else [name]
     if os.path.exists(EMBEDDINGS_PATH):
@@ -26,7 +29,8 @@ def save_embeddings(name,status,classifier,extract_all=False):
         speaker_embeddings = {}
 
     for speaker in speakers:
-        status.setText(f'Extracting Embeddings for {speaker}...')
+        print(speaker)
+        status.setText(f'Extracting Embeddings for speaker {speaker}...')
         speaker_dir = os.path.join(DATASET_DIR, speaker)
         if not os.path.isdir(speaker_dir):
             continue
@@ -62,4 +66,5 @@ def save_embeddings(name,status,classifier,extract_all=False):
         pickle.dump(speaker_embeddings, f)
     status.setText(f'Building FAISS Index...')
     build_faiss_index(EMBEDDINGS_PATH)
+    status.setText(f"Done...")
 

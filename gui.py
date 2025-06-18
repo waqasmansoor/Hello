@@ -9,10 +9,10 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QTimer
 from embeddings import save_embeddings
-from speechbrain.pretrained import EncoderClassifier
+
 from predict import predict_speaker
 
-classifier = EncoderClassifier.from_hparams(source="model/spkrec-ecapa-voxceleb")
+
 
 class SpeakerDialog(QDialog):
     def __init__(self, parent=None):
@@ -45,10 +45,12 @@ class SpeakerDialog(QDialog):
         self.setLayout(layout)
 
         self.test_clicked = False
+        self.pred=None
+        self.score=None
 
     def test_action(self):
         self.test_clicked = True
-        self.pred,self.score=predict_speaker(self.parent.audio,self.parent.samplerate,classifier)
+        self.pred,self.score=predict_speaker(self.parent.audio,self.parent.samplerate)
         self.accept()
 
     def get_data(self):
@@ -144,7 +146,7 @@ class VoiceRecorder(QWidget):
             else:
                 self.status_label.setText("Recording discarded (no name entered)")
         if save_embdgs:
-            save_embeddings(name,self.status_label,classifier)
+            save_embeddings(name,self.status_label)
             self.status_label.setText(f'Thanks {name} for recording your voice.')
 
 if __name__ == '__main__':

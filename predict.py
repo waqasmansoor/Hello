@@ -4,13 +4,14 @@ import faiss
 import torch
 from vad import apply_vad
 import os
+from speechbrain.pretrained import EncoderClassifier
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 # Load classifier and FAISS
 
+classifier = EncoderClassifier.from_hparams(source="model/spkrec-ecapa-voxceleb")
 
-
-def predict_speaker(audio,samplerate,classifier):
+def predict_speaker(audio,samplerate):
     index = faiss.read_index("faiss.index")
     with open("labels.pkl", "rb") as f:
         all_labels = pickle.load(f)
@@ -37,10 +38,4 @@ def predict_speaker(audio,samplerate,classifier):
     score = D[0][0]
     predicted_speaker = all_labels[top_index]
     return predicted_speaker,score
-    # === Output ===
-    print(f"🔍 Predicted speaker: {predicted_speaker}")
-    print(f"📊 Similarity score: {score:.4f}")
 
-    # Optional: Reject if below confidence threshold
-    if score < 0.75:
-        print("⚠️ Speaker unknown or unclear")
