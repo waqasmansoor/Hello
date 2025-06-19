@@ -11,7 +11,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 classifier = EncoderClassifier.from_hparams(source="model/spkrec-ecapa-voxceleb")
 
-def predict_speaker(audio,samplerate):
+def predict_speaker(audio,samplerate,audio_length):
     index = faiss.read_index("faiss.index")
     with open("labels.pkl", "rb") as f:
         all_labels = pickle.load(f)
@@ -20,10 +20,8 @@ def predict_speaker(audio,samplerate):
     test_tensor = torch.tensor(audio.squeeze(), dtype=torch.float32).unsqueeze(0)
 
     # === VAD ===
-    test_tensor = apply_vad(test_tensor, samplerate)
-    if test_tensor.shape[1] < 100:
-        print("⚠️ No speech detected.")
-        exit()
+    test_tensor = apply_vad(test_tensor, samplerate,audio_length)
+    
 
     # === Embedding ===
     with torch.no_grad():

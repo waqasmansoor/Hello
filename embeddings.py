@@ -6,7 +6,7 @@ import pickle
 from vad import apply_vad
 from build_faiss import build_faiss_index
 from speechbrain.pretrained import EncoderClassifier
-from parameters import SAMPLE_RATE,EMBEDDINGS_PATH
+from parameters import SAMPLE_RATE,EMBEDDINGS_PATH,AUDIO_LENGTH_TRAIN
 import uuid
 # Load pretrained ECAPA model
 
@@ -22,16 +22,16 @@ DATASET_DIR = os.path.join(base_dir,'dataset')
 
 def vad(signal,speaker,s):
     s.setText(f'Applying VAD...')
-    signals = apply_vad(signal,SAMPLE_RATE)
+    signals = apply_vad(signal,SAMPLE_RATE,AUDIO_LENGTH_TRAIN)
     
     for signal in signals:
+        if signal.ndim < 2 or signal.shape[1] < 100:
+            print(f"Skipping audio — too short after VAD.")
+            continue
         filename = f"audio_{uuid.uuid4().hex}.wav"
         filepath = os.path.join(DATASET_DIR,speaker,filename)
         
         torchaudio.save(filepath,signal,SAMPLE_RATE)
-    # if signal.shape[1] < 100:
-    #     print(f"Skipping {filepath} — too short after VAD.")
-    #     return
     # torchaudio.save(filepath, signal, SAMPLE_RATE)
 
 def save_embeddings(name,status,extract_all=False):

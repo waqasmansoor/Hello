@@ -41,7 +41,7 @@ class status:
 
 
 s=status()
-save_embeddings(None,s,True)
+# save_embeddings(None,s,True)
 
 def get_new_thread():
     while True:
@@ -68,9 +68,16 @@ main_thread = threading.Thread(target=get_new_thread,daemon=True)
 main_thread.start()
     
 
-
-@app.route('/', methods=['POST'])
-def receive_audio():
+@app.route('/test', methods=['POST'])
+def get_test_data():
+    if 'audio' not in request.files:
+        return jsonify({'error': 'No audio file part'}), 400
+    file = request.files['audio']
+    # print(file.filename,file.file)
+    return jsonify({'message': 'File received'}), 200
+    
+@app.route('/train', methods=['POST'])
+def get_train_data():
     if 'audio' not in request.files:
         return jsonify({'error': 'No audio file part'}), 400
 

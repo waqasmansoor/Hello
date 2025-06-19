@@ -89,6 +89,9 @@
                         case 'record':
                             record(e.data.buffer);
                             break;
+                        case 'stream':
+                            stream(e.data.buffer);
+                            break
                         case 'exportWAV':
                             exportWAV(e.data.type);
                             break;
@@ -107,6 +110,13 @@
                     initBuffers();
                 }
     
+                function stream(inputBuffer){
+                    //TODO
+                    // Will Implement Later
+                    // for (var channel = 0; channel < numChannels; channel++){
+
+                    // }
+                }
                 function record(inputBuffer) {
                     for (var channel = 0; channel < numChannels; channel++) {
                         recBuffers[channel].push(inputBuffer[channel]);
