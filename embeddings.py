@@ -6,18 +6,33 @@ import pickle
 from vad import apply_vad
 from build_faiss import build_faiss_index
 from speechbrain.pretrained import EncoderClassifier
-
+from parameters import SAMPLE_RATE,EMBEDDINGS_PATH
+import uuid
 # Load pretrained ECAPA model
 
 
 # Path to dataset
-EMBEDDINGS_PATH = "embeddings.pkl"
+
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 model_dir = os.path.join(base_dir, 'model', 'spkrec-ecapa-voxceleb')
 classifier = EncoderClassifier.from_hparams(source=model_dir)
 DATASET_DIR = os.path.join(base_dir,'dataset')
 
+
+def vad(signal,speaker,s):
+    s.setText(f'Applying VAD...')
+    signals = apply_vad(signal,SAMPLE_RATE)
+    
+    for signal in signals:
+        filename = f"audio_{uuid.uuid4().hex}.wav"
+        filepath = os.path.join(DATASET_DIR,speaker,filename)
+        
+        torchaudio.save(filepath,signal,SAMPLE_RATE)
+    # if signal.shape[1] < 100:
+    #     print(f"Skipping {filepath} — too short after VAD.")
+    #     return
+    # torchaudio.save(filepath, signal, SAMPLE_RATE)
 
 def save_embeddings(name,status,extract_all=False):
     # Loop over each speaker
@@ -29,7 +44,6 @@ def save_embeddings(name,status,extract_all=False):
         speaker_embeddings = {}
 
     for speaker in speakers:
-        print(speaker)
         status.setText(f'Extracting Embeddings for speaker {speaker}...')
         speaker_dir = os.path.join(DATASET_DIR, speaker)
         if not os.path.isdir(speaker_dir):
@@ -43,17 +57,17 @@ def save_embeddings(name,status,extract_all=False):
 
                 # Load audio
                 signal, fs = torchaudio.load(filepath)
-                signal = signal.mean(dim=0).unsqueeze(0)  # Convert to mono
+                # signal = signal.mean(dim=0).unsqueeze(0)  # Convert to mono
 
                 # Resample to 16 kHz if needed
-                if fs != 16000:
-                    resampler = torchaudio.transforms.Resample(fs, 16000)
+                if fs != SAMPLE_RATE:
+                    resampler = torchaudio.transforms.Resample(fs, SAMPLE_RATE)
                     signal = resampler(signal)
-                status.setText(f'Applying VAD...')
-                signal = apply_vad(signal,fs)
-                if signal.shape[1] < 100:
-                    print(f"Skipping {filename} — too short after VAD.")
-                    continue
+                
+                # signal = apply_vad(signal,fs)
+                # if signal.shape[1] < 100:
+                #     print(f"Skipping {filename} — too short after VAD.")
+                #     continue
                 # Extract embedding
                 with torch.no_grad():
                     embedding = classifier.encode_batch(signal).squeeze().cpu().numpy()
@@ -62,9 +76,10 @@ def save_embeddings(name,status,extract_all=False):
     
 
     # Save to disk
-    with open(EMBEDDINGS_PATH, "wb") as f:
-        pickle.dump(speaker_embeddings, f)
-    status.setText(f'Building FAISS Index...')
-    build_faiss_index(EMBEDDINGS_PATH)
-    status.setText(f"Done...")
+    if sum([len(x) for x in speaker_embeddings.values()]) > 0:
+        with open(EMBEDDINGS_PATH, "wb") as f:
+            pickle.dump(speaker_embeddings, f)
+        status.setText(f'Building FAISS Index...')
+        build_faiss_index(EMBEDDINGS_PATH)
+        status.setText(f"Done...")
 

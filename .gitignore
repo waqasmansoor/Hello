@@ -5,3 +5,4 @@ faiss.index
 labels.pkl
 temp_test.wav
 __pycache__/*
+__pycache__/

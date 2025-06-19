@@ -1,22 +1,28 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
-from datetime import datetime
 import soundfile as sf
-import scipy.signal as sps
 import sys
 import os
 import threading
+import queue
+import time
+import io
+import torchaudio
+import torchaudio.transforms as T
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from embeddings import save_embeddings,DATASET_DIR
-
+from embeddings import save_embeddings,vad,DATASET_DIR
+from parameters import SAMPLE_RATE
 
 
 app = Flask(__name__)
 CORS(app)
+thread_queue=queue.Queue()
 os.makedirs(DATASET_DIR, exist_ok=True)
-SAMPLE_RATE = 16000
+
+
+
 if os.path.exists('embeddings.pkl'):
     os.remove('embeddings.pkl')
 if os.path.exists('faiss.index'):
@@ -29,26 +35,37 @@ class status:
     def __init__(self):
         self.status = []
     def setText(self,text):
-        if len(self.status)>10:
+        if len(self.status)>100:
             self.status=[]
         self.status.append(text)
 
 
 s=status()
 save_embeddings(None,s,True)
-def read_audio(file,speaker):
-    filename = f"audio_{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav"
+
+def get_new_thread():
+    while True:
+        new_thread = thread_queue.get()
+        if new_thread is None:
+            break
+        waveform,sr,speaker = new_thread
+        read_audio(waveform,sr,speaker)
+        thread_queue.task_done()
+
+def read_audio(waveform,sr,speaker):
     
-    filepath = os.path.join(DATASET_DIR,speaker,filename)
-    rec,fsf=sf.read(file)
-    number_of_samples=round(len(rec) * float(SAMPLE_RATE) / fsf)
-    # #  Resampling to 16k
-    data=sps.resample(rec,number_of_samples)
-    sf.write(filepath,data,SAMPLE_RATE)
-    thread = threading.Thread(target=save_embeddings,args=(speaker,s))
-    thread.daemon = True
-    thread.start()
+    if sr != SAMPLE_RATE:
+    # # #  Resampling to 16k
+        resampler = T.Resample(orig_freq=sr, new_freq=SAMPLE_RATE)
+        waveform = resampler(waveform)
+    # sf.write(filepath,data,SAMPLE_RATE)
+    start=time.time()
+    vad(waveform,speaker,s)
+    # save_embeddings(speaker,s)
+    s.setText(f"Time: {time.time()-start}")
     
+main_thread = threading.Thread(target=get_new_thread,daemon=True)
+main_thread.start()
     
 
 
@@ -63,7 +80,14 @@ def receive_audio():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
     os.makedirs(os.path.join(DATASET_DIR,speaker),exist_ok=True)
-    read_audio(file,speaker)
+    
+    buffer = io.BytesIO(file.read())
+    buffer.seek(0)
+    waveform, sample_rate = torchaudio.load(buffer)
+    signal = waveform.mean(dim=0).unsqueeze(0)  # Convert to mono
+    # rec,fsf=sf.read(file)
+    thread_queue.put((signal,sample_rate,speaker))
+    
     
     return jsonify({'message': 'File received'}), 200
 
@@ -71,5 +95,12 @@ def receive_audio():
 def get_status():
     return jsonify({"status":s.status})
 
+#For Testing (Development Environment)
+import atexit
+@atexit.register
+def cleanup():
+    thread_queue.put(None) 
+    main_thread.join()
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000,debug=False)
+    app.run(host='0.0.0.0', port=5000,debug=True)
