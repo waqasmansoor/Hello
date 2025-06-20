@@ -8,10 +8,13 @@ declare global {
 }
 
 function App() {
-  const [frame,setFrame] = useState(1);
+  const [frame, setFrame] = useState(1);
   const [isRecording, setIsRecording] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [url, setUrl] = useState<RequestInfo | URL>('http://localhost:5000/train')
+  const [isLoading, setIsLoading] = useState(false);
+  const [filepath, setFilepath] = useState<String | null>(null);
+
 
   const gumStream = useRef<MediaStream | null>(null);
   const audioContext = useRef<AudioContext | null>(null);
@@ -29,13 +32,13 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (frame== 1) {
-      setUrl('http://localhost:5000/train')
+    if (frame == 1) {
+      setUrl('http://localhost:5000/save_embeddings')
     }
-    else{
+    else {
       setUrl('http://localhost:5000/process_audio')
     }
-  },[frame])
+  }, [frame])
 
   const askUsername = () => {
     const name = prompt("What's your name?");
@@ -44,17 +47,17 @@ function App() {
 
   const startStreaming = async () => {
     console.log('Streaming Started');
-    
-    if (isRecording){
+
+    if (isRecording) {
       stopRecording()
-    }else{
+    } else {
       startRecording()
     }
-    
-    
+
+
   }
   const checkUserAndStartRecording = async () => {
-    if (!username){
+    if (!username) {
       askUsername();
       if (!username) return;
     }
@@ -63,7 +66,7 @@ function App() {
   }
   const startRecording = async () => {
     console.log('Recording button clicked');
-    
+
     const constraints = { audio: true, video: false };
 
     try {
@@ -94,19 +97,38 @@ function App() {
     setIsRecording(false);
   };
 
+  const get_timestamp = () => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const timestamp: string = now.getFullYear().toString() +
+      pad(now.getMonth() + 1) +
+      pad(now.getDate()) +
+      '-' +
+      pad(now.getHours()) +
+      pad(now.getMinutes()) +
+      pad(now.getSeconds());
+    return timestamp;
+  }
   const sendAudio = (blob: Blob) => {
-    
+    setIsLoading(true); // Start loading
+
     const formData = new FormData();
-    const filename = `recording_${Date.now()}.wav`;
+    const source = 'meeting';
+    const num1 = Math.floor(Math.random() * 10000);
+    const num2 = Math.floor(Math.random() * 10000);
+    const pad = (n: number) => String(n).padStart(4, '0');
+    const ts = get_timestamp();
+    const filename = `${source}-${pad(num1)}-${pad(num2)}-${ts}-0.0.wav`;
     formData.append('file', blob, filename);
-    if (frame == 1){
-      if (!username){
-            askUsername();
-            if (!username) return;
-          }
+
+    if (frame === 1) {
+      if (!username) {
+        askUsername();
+        if (!username) return;
+      }
       formData.append('name', username);
     }
-    
+
     fetch(url, {
       method: 'POST',
       body: formData
@@ -114,11 +136,17 @@ function App() {
       .then((res) => res.json())
       .then((data) => {
         console.log('✅ Server response:', data);
+        const file_path = data.transcript_id;
+        setFilepath(file_path)
       })
       .catch((err) => {
         console.error('❌ Upload failed:', err);
+      })
+      .finally(() => {
+        setIsLoading(false); // Stop loading
       });
   };
+
   const resetUsername = () => {
     setUsername(null);
   };
@@ -142,6 +170,25 @@ function App() {
         >
           ⬅️
         </button>
+
+      )}
+      {filepath && (
+        <div className="mt-4">
+          <a
+            href={filepath.replace('./', '/')} // Make it usable if served statically
+            className="text-blue-600 underline hover:text-blue-800"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {filepath}
+          </a>
+        </div>
+      )}
+      {isLoading && (
+        <div className="mt-4 text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+          <p className="mt-2 text-gray-700">Processing audio...</p>
+        </div>
       )}
 
       {/* Right Arrow on Frame 1 */}
