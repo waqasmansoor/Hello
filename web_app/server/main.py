@@ -31,9 +31,9 @@ thread_queue = queue.Queue()
 os.makedirs(DATASET_DIR, exist_ok=True)
 
 # Clean up previous embeddings
-for f in ['embeddings.pkl', 'faiss.index', 'labels.pkl']:
-    if os.path.exists(f):
-        os.remove(f)
+# for f in ['embeddings.pkl', 'faiss.index', 'labels.pkl']:
+#     if os.path.exists(f):
+#         os.remove(f)
 
 # Status tracker class
 class Status:
@@ -45,7 +45,9 @@ class Status:
         self.status.append(text)
 
 s = Status()
-save_embeddings(None,s,True)
+#Build New Embeddings from Scratch
+# save_embeddings(None,s,True)
+
 def get_new_thread():
     while True:
         new_thread = thread_queue.get()
