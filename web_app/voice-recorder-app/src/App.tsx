@@ -11,7 +11,7 @@ function App() {
   const [frame, setFrame] = useState(1);
   const [isRecording, setIsRecording] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
-  const [url, setUrl] = useState<RequestInfo | URL>('http://localhost:5000/train')
+  const [url, setUrl] = useState<RequestInfo | URL>('https://192.168.23.142/api/save_embeddings')
   const [isLoading, setIsLoading] = useState(false);
   const [filepath, setFilepath] = useState<String | null>(null);
   const [speakers, setSpeakers] = useState<string[]>([]);
@@ -33,7 +33,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    fetch('http://localhost:5000/get_speakers')
+    fetch('https://192.168.23.142/api/get_speakers')
       .then((res) => res.json())
       .then((data) => {
         if (data.speakers) {
@@ -47,10 +47,10 @@ function App() {
 
   useEffect(() => {
     if (frame == 1) {
-      setUrl('http://localhost:5000/save_embeddings')
+      setUrl('https://192.168.23.142/api/save_embeddings')
     }
     else {
-      setUrl('http://localhost:5000/process_audio')
+      setUrl('https://192.168.23.142/api/process_audio')
     }
   }, [frame])
 

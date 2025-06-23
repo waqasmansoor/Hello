@@ -2,6 +2,7 @@
   "name": "voice-recorder-app",
   "version": "0.1.0",
   "private": true,
+  "homepage": "/vr",
   "dependencies": {
     "@tailwindcss/cli": "^4.1.10",
     "@testing-library/dom": "^10.4.0",
