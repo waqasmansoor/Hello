@@ -14,6 +14,7 @@ function App() {
   const [url, setUrl] = useState<RequestInfo | URL>('http://localhost:5000/train')
   const [isLoading, setIsLoading] = useState(false);
   const [filepath, setFilepath] = useState<String | null>(null);
+  const [speakers, setSpeakers] = useState<string[]>([]);
 
 
   const gumStream = useRef<MediaStream | null>(null);
@@ -30,6 +31,19 @@ function App() {
       document.body.removeChild(script);
     }
   }, [])
+
+  useEffect(() => {
+    fetch('http://localhost:5000/get_speakers')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.speakers) {
+          setSpeakers(data.speakers);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch speakers:", err);
+      });
+  }, []);
 
   useEffect(() => {
     if (frame == 1) {
@@ -190,7 +204,16 @@ function App() {
           <p className="mt-2 text-gray-700">Processing audio...</p>
         </div>
       )}
-
+      {speakers.length > 0 && (
+        <div className="absolute top-20 right-4 bg-white border px-4 py-2 rounded shadow-md max-h-80 overflow-y-auto w-48">
+          <h2 className="font-bold text-gray-700 mb-2 text-center">🎙️ Speakers</h2>
+          <ul className="text-gray-800 text-sm space-y-1">
+            {speakers.map((name, index) => (
+              <li key={index}>• {name.toUpperCase()}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {/* Right Arrow on Frame 1 */}
       {frame === 1 && (
         <button
